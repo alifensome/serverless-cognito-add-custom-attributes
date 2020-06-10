@@ -1,7 +1,7 @@
-const _ = require('lodash');
-const helperMethods = require('./helperMethods');
+const _ = require("lodash");
+const helperMethods = require("./helperMethods");
 
-const Name = 'CognitoAddCustomAttributesPlugin';
+const Name = "CognitoAddCustomAttributesPlugin";
 
 const loadCustom = helperMethods.loadCustom;
 const Params = helperMethods.Params;
@@ -10,7 +10,7 @@ const describeStack = helperMethods.describeStack;
 class CognitoAddCustomAttributesPluginError extends Error {
   constructor(error, innerMessage) {
     super(error.message);
-    this.name = 'CognitoAddCustomAttributesPluginError';
+    this.name = "CognitoAddCustomAttributesPluginError";
 
     this.innerMessage = innerMessage;
     Error.captureStackTrace(error, CognitoAddCustomAttributesPluginError);
@@ -24,7 +24,7 @@ const findOutputId = (custom, stack, outputKey) => {
       (output) => output.OutputKey === custom[outputKey]
     );
     if (output) {
-      const outputId = _.get(output, 'OutputValue');
+      const outputId = _.get(output, "OutputValue");
       return outputId;
     } else {
       throw new Error(`Could not find ${outputKey} in Outputs for stack.`);
@@ -35,19 +35,19 @@ const findOutputId = (custom, stack, outputKey) => {
 const describeCognitoUserPool = async (AWS, userPoolId) => {
   try {
     const describeParams = {
-      UserPoolId: userPoolId
+      UserPoolId: userPoolId,
     };
 
     const response = await AWS.request(
-      'CognitoIdentityServiceProvider',
-      'describeUserPool',
+      "CognitoIdentityServiceProvider",
+      "describeUserPool",
       describeParams
     );
     return response.UserPool;
   } catch (error) {
     throw new CognitoAddCustomAttributesPluginError(
       error,
-      'Error occurred when fetching UserPool'
+      "Error occurred when fetching UserPool"
     );
   }
 };
@@ -60,26 +60,26 @@ const describeCognitoUserPoolClient = async (
   try {
     const describeParams = {
       ClientId: userPoolClientId,
-      UserPoolId: userPoolId
+      UserPoolId: userPoolId,
     };
 
     const response = await AWS.request(
-      'CognitoIdentityServiceProvider',
-      'describeUserPoolClient',
+      "CognitoIdentityServiceProvider",
+      "describeUserPoolClient",
       describeParams
     );
     return response.UserPoolClient;
   } catch (error) {
     throw new CognitoAddCustomAttributesPluginError(
       error,
-      'Error occurred when fetching UserPoolClient'
+      "Error occurred when fetching UserPoolClient"
     );
   }
 };
 
 const transformAttributeName = (name) => {
   let customName = name;
-  if (!_.startsWith(customName, 'custom:')) {
+  if (!_.startsWith(customName, "custom:")) {
     customName = `custom:${customName}`;
   }
   return customName;
@@ -107,7 +107,7 @@ const addNewCustomAttributesToUserPool = async (
     try {
       const addCustomAttributesParams = {
         UserPoolId: userPoolId,
-        CustomAttributes: newAttributes
+        CustomAttributes: newAttributes,
       };
 
       log(
@@ -117,19 +117,19 @@ const addNewCustomAttributesToUserPool = async (
       );
 
       await AWS.request(
-        'CognitoIdentityServiceProvider',
-        'addCustomAttributes',
+        "CognitoIdentityServiceProvider",
+        "addCustomAttributes",
         addCustomAttributesParams
       );
-      log('Successfully added attributes to pool');
+      log("Successfully added attributes to pool");
     } catch (error) {
       throw new CognitoAddCustomAttributesPluginError(
         error,
-        'Error occurred when adding attributes to pool'
+        "Error occurred when adding attributes to pool"
       );
     }
   } else {
-    return log('Supplied attributes already exist in pool');
+    return log("Supplied attributes already exist in pool");
   }
 };
 
@@ -159,7 +159,7 @@ const updateUserPoolClient = async (
         WriteAttributes: _.concat(
           userPoolClient.WriteAttributes,
           writeAttributeNames
-        )
+        ),
       };
 
       if (readAttributeNames.length > 0) {
@@ -178,19 +178,19 @@ const updateUserPoolClient = async (
       }
 
       await AWS.request(
-        'CognitoIdentityServiceProvider',
-        'updateUserPoolClient',
+        "CognitoIdentityServiceProvider",
+        "updateUserPoolClient",
         params
       );
-      log('Successfully updated client');
+      log("Successfully updated client");
     } catch (error) {
       throw new CognitoAddCustomAttributesPluginError(
         error,
-        'Error occurred when updating client'
+        "Error occurred when updating client"
       );
     }
   } else {
-    return log('No update required to UserPoolClient');
+    return log("No update required to UserPoolClient");
   }
 };
 
@@ -198,10 +198,10 @@ class CognitoAddCustomAttributesPlugin {
   constructor(serverless, options) {
     this.serverless = serverless;
     this.options = options;
-    this.provider = serverless.getProvider('aws');
+    this.provider = serverless.getProvider("aws");
 
     this.hooks = {
-      'after:deploy:deploy': this.postDeploy.bind(this)
+      "after:deploy:deploy": this.postDeploy.bind(this),
     };
 
     this.log = this.log.bind(this);
@@ -218,7 +218,7 @@ class CognitoAddCustomAttributesPlugin {
     const { provider: AWS, custom, log } = this;
 
     try {
-      log('Start');
+      log("Start");
 
       const stack = await describeStack(AWS);
 
@@ -244,7 +244,7 @@ class CognitoAddCustomAttributesPlugin {
         await this.processCognitoCustomAttributeMapping(stack, custom);
       }
 
-      log('End');
+      log("End");
     } catch (error) {
       log(`run Error [Message: ${error.message}]`);
       if (error.innerMessage) log(`${error.innerMessage}. ${error}`);
@@ -277,25 +277,9 @@ class CognitoAddCustomAttributesPlugin {
 
     const newAttributes = getMissingAttributes(
       mappingItem.CustomAttributes,
-      _.map(userPool.SchemaAttributes, 'Name')
+      _.map(userPool.SchemaAttributes, "Name")
     );
     await addNewCustomAttributesToUserPool(AWS, log, userPoolId, newAttributes);
-
-    const newReadAttributes = getMissingAttributes(
-      mappingItem.CustomAttributes,
-      userPoolClient.ReadAttributes
-    );
-    const newWriteAttributes = getMissingAttributes(
-      mappingItem.CustomAttributes,
-      userPoolClient.WriteAttributes
-    );
-    await updateUserPoolClient(
-      AWS,
-      log,
-      userPoolClient,
-      newReadAttributes,
-      newWriteAttributes
-    );
   }
 
   log(message) {
