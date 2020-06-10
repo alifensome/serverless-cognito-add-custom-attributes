@@ -45,6 +45,10 @@ const describeCognitoUserPool = async (AWS, userPoolId) => {
     );
     return response.UserPool;
   } catch (error) {
+    if (error.message == `User pool ${userPoolId} does not exist.`) {
+      return { firstDeploy: true };
+    }
+    log(`Error: ${error.message}`);
     throw new CognitoAddCustomAttributesPluginError(
       error,
       "Error occurred when fetching UserPool"
@@ -269,16 +273,15 @@ class CognitoAddCustomAttributesPlugin {
     log(`Found userPoolClientId: ${userPoolClientId}`);
 
     const userPool = await describeCognitoUserPool(AWS, userPoolId);
-    const userPoolClient = await describeCognitoUserPoolClient(
-      AWS,
-      userPoolId,
-      userPoolClientId
-    );
-
-    const newAttributes = getMissingAttributes(
-      mappingItem.CustomAttributes,
-      _.map(userPool.SchemaAttributes, "Name")
-    );
+    let newAttributes = mappingItem.CustomAttributes;
+    if (userPool.firstDeploy) {
+      log(`First deploy with custom attributes:${newAttributes.join("\n")}`);
+    } else {
+      newAttributes = getMissingAttributes(
+        mappingItem.CustomAttributes,
+        _.map(userPool.SchemaAttributes, "Name")
+      );
+    }
     await addNewCustomAttributesToUserPool(AWS, log, userPoolId, newAttributes);
   }
 
